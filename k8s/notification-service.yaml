@@ -50,9 +50,9 @@ spec:
         - name: EMAIL_PROVIDER
           value: "ses"
         - name: SES_FROM_EMAIL
-          value: "raghukongala406@gmail.com"
+          value: "kongalaraghu406@gmail.com"
         - name: TASK_OWNER_EMAIL
-          value: "raghukongala406@gmail.com"
+          value: "kongalaraghu406@gmail.com"
         - name: AWS_REGION
           value: "ap-south-1"
         resources:
