@@ -10,6 +10,9 @@ const notificationRoutes = require('./routes/notifications');
 const app = express();
 const PORT = process.env.PORT || 3003;
 
+// Trust proxy for ALB/EKS
+app.set('trust proxy', 1);
+
 // Redis client
 const redisClient = redis.createClient({
   url: `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`

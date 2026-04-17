@@ -11,6 +11,9 @@ const userRoutes = require('./routes/users');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust proxy for ALB/EKS
+app.set('trust proxy', 1);
+
 // Health check endpoint (before rate limiting for K8s probes)
 app.get('/health', (req, res) => {
   res.status(200).json({ 
