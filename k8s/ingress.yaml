@@ -11,27 +11,15 @@ metadata:
   name: task-management-ingress
   namespace: task-management
   annotations:
-    # ALB Configuration
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/load-balancer-name: task-management-alb
-    
-    # HTTPS/SSL Configuration
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
-    alb.ingress.kubernetes.io/ssl-redirect: "443"
-    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-south-1:796796207873:certificate/85e2ffb5-c48d-4c59-82e8-86748d9949f6
-    
-    # Health Check Configuration
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
     alb.ingress.kubernetes.io/healthcheck-path: /health
     alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "10"
     alb.ingress.kubernetes.io/healthcheck-interval-seconds: "30"
     alb.ingress.kubernetes.io/success-codes: "200,404"
-    
-    # Performance
     alb.ingress.kubernetes.io/load-balancer-attributes: idle_timeout.timeout_seconds=60
-    
-    # External DNS (auto-creates Route53 record)
-    external-dns.alpha.kubernetes.io/hostname: raghu.buzz,www.raghu.buzz
 spec:
   ingressClassName: alb
   rules:
