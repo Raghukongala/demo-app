@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: 957948932374.dkr.ecr.ap-south-1.amazonaws.com/task-management/frontend:latest
+        image: 957948932374.dkr.ecr.ap-south-1.amazonaws.com/task-management/frontend:1
         ports:
         - containerPort: 80
         resources:
@@ -61,7 +61,7 @@ spec:
         command: ['sh', '-c', 'until nc -z mongodb-service 27017; do echo "Waiting for MongoDB..."; sleep 2; done;']
       containers:
       - name: user-service
-        image: 957948932374.dkr.ecr.ap-south-1.amazonaws.com/task-management/user-service:latest
+        image: 957948932374.dkr.ecr.ap-south-1.amazonaws.com/task-management/user-service:1
         ports:
         - containerPort: 3001
         env:
@@ -137,7 +137,7 @@ spec:
         command: ['sh', '-c', 'until nc -z postgres-service 5432; do echo "Waiting for PostgreSQL..."; sleep 2; done;']
       containers:
       - name: task-service
-        image: 957948932374.dkr.ecr.ap-south-1.amazonaws.com/task-management/task-service:latest
+        image: 957948932374.dkr.ecr.ap-south-1.amazonaws.com/task-management/task-service:1
         ports:
         - containerPort: 3002
         env:
@@ -215,7 +215,7 @@ spec:
         command: ['sh', '-c', 'until nc -z redis-service 6379; do echo "Waiting for Redis..."; sleep 2; done;']
       containers:
       - name: notification-service
-        image: 957948932374.dkr.ecr.ap-south-1.amazonaws.com/task-management/notification-service:latest
+        image: 957948932374.dkr.ecr.ap-south-1.amazonaws.com/task-management/notification-service:1
         ports:
         - containerPort: 3003
         env:
