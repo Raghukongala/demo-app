@@ -1,0 +1,157 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_REGION    = 'ap-south-1'
+        AWS_ACCOUNT   = '957948932374'
+        ECR_BASE      = "${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/bank-app"
+        CLUSTER_NAME  = 'task-management-eks'
+        NAMESPACE     = 'bank-app'
+        IMAGE_TAG     = "${BUILD_NUMBER}"
+        GIT_REPO      = 'https://github.com/Raghukongala/demo-app.git'
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: "${GIT_REPO}"
+            }
+        }
+
+        stage('ECR Login') {
+            steps {
+                sh 'aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_BASE'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    sh "${tool 'SonarScanner'}/bin/sonar-scanner -Dsonar.projectKey=bank-app -Dsonar.sources=bank-app"
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: false
+                }
+            }
+        }
+
+        stage('Build & Push Images') {
+            parallel {
+                stage('frontend') {
+                    steps {
+                        dir('bank-app/frontend') {
+                            sh '''
+                                docker build -t $ECR_BASE/frontend:$IMAGE_TAG .
+                                docker push $ECR_BASE/frontend:$IMAGE_TAG
+                                docker tag $ECR_BASE/frontend:$IMAGE_TAG $ECR_BASE/frontend:latest
+                                docker push $ECR_BASE/frontend:latest
+                            '''
+                        }
+                    }
+                }
+                stage('account-service') {
+                    steps {
+                        dir('bank-app/account-service') {
+                            sh '''
+                                docker build -t $ECR_BASE/account-service:$IMAGE_TAG .
+                                docker push $ECR_BASE/account-service:$IMAGE_TAG
+                                docker tag $ECR_BASE/account-service:$IMAGE_TAG $ECR_BASE/account-service:latest
+                                docker push $ECR_BASE/account-service:latest
+                            '''
+                        }
+                    }
+                }
+                stage('transaction-service') {
+                    steps {
+                        dir('bank-app/transaction-service') {
+                            sh '''
+                                docker build -t $ECR_BASE/transaction-service:$IMAGE_TAG .
+                                docker push $ECR_BASE/transaction-service:$IMAGE_TAG
+                                docker tag $ECR_BASE/transaction-service:$IMAGE_TAG $ECR_BASE/transaction-service:latest
+                                docker push $ECR_BASE/transaction-service:latest
+                            '''
+                        }
+                    }
+                }
+                stage('notification-service') {
+                    steps {
+                        dir('bank-app/notification-service') {
+                            sh '''
+                                docker build -t $ECR_BASE/notification-service:$IMAGE_TAG .
+                                docker push $ECR_BASE/notification-service:$IMAGE_TAG
+                                docker tag $ECR_BASE/notification-service:$IMAGE_TAG $ECR_BASE/notification-service:latest
+                                docker push $ECR_BASE/notification-service:latest
+                            '''
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Trivy Scan') {
+            steps {
+                sh '''
+                    export PATH=$PATH:$HOME/bin
+                    echo "=== Scanning account-service ==="
+                    trivy image --exit-code 0 --severity HIGH,CRITICAL --no-progress $ECR_BASE/account-service:$IMAGE_TAG
+                    echo "=== Scanning transaction-service ==="
+                    trivy image --exit-code 0 --severity HIGH,CRITICAL --no-progress $ECR_BASE/transaction-service:$IMAGE_TAG
+                    echo "=== Scanning frontend ==="
+                    trivy image --exit-code 0 --severity HIGH,CRITICAL --no-progress $ECR_BASE/frontend:$IMAGE_TAG
+                '''
+            }
+        }
+
+        stage('Deploy to EKS') {
+            steps {
+                sh '''
+                    aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
+                    kubectl apply -f bank-app/k8s/namespace.yaml
+                    kubectl apply -f bank-app/k8s/postgres.yaml
+                    kubectl apply -f bank-app/k8s/mongodb.yaml
+                    kubectl apply -f bank-app/k8s/account-service.yaml
+                    kubectl apply -f bank-app/k8s/transaction-service.yaml
+                    kubectl apply -f bank-app/k8s/notification-service.yaml
+                    kubectl apply -f bank-app/k8s/frontend.yaml
+                    kubectl apply -f bank-app/k8s/ingress.yaml
+                '''
+            }
+        }
+
+        stage('Update Image Tags') {
+            steps {
+                sh '''
+                    kubectl set image deployment/frontend frontend=$ECR_BASE/frontend:$IMAGE_TAG -n $NAMESPACE
+                    kubectl set image deployment/account-service account-service=$ECR_BASE/account-service:$IMAGE_TAG -n $NAMESPACE
+                    kubectl set image deployment/transaction-service transaction-service=$ECR_BASE/transaction-service:$IMAGE_TAG -n $NAMESPACE
+                    kubectl set image deployment/notification-service notification-service=$ECR_BASE/notification-service:$IMAGE_TAG -n $NAMESPACE
+                '''
+            }
+        }
+
+        stage('Verify Rollout') {
+            steps {
+                sh '''
+                    kubectl rollout status deployment/frontend -n $NAMESPACE --timeout=180s
+                    kubectl rollout status deployment/account-service -n $NAMESPACE --timeout=180s
+                    kubectl rollout status deployment/transaction-service -n $NAMESPACE --timeout=180s
+                '''
+            }
+        }
+    }
+
+    post {
+        failure {
+            echo 'Bank App deployment failed!'
+        }
+        success {
+            echo "Bank App deployed successfully! Build: ${BUILD_NUMBER}"
+        }
+    }
+}

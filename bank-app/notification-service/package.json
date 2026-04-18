@@ -1,0 +1,10 @@
+{
+  "name": "bank-notification-service",
+  "version": "1.0.0",
+  "main": "server.js",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "@aws-sdk/client-ses": "^3.0.0"
+  }
+}

@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: account-service
+  namespace: bank-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: account-service
+  template:
+    metadata:
+      labels:
+        app: account-service
+    spec:
+      initContainers:
+      - name: wait-for-postgres
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z postgres-service 5432; do sleep 2; done']
+      containers:
+      - name: account-service
+        image: 957948932374.dkr.ecr.ap-south-1.amazonaws.com/bank-app/account-service:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DB_HOST
+          value: "postgres-service"
+        - name: DB_NAME
+          value: "bankdb"
+        - name: DB_USER
+          value: "bankuser"
+        - name: DB_PASSWORD
+          value: "bankpassword"
+        livenessProbe:
+          httpGet:
+            path: /api/accounts/health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/accounts/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: account-service
+  namespace: bank-app
+spec:
+  selector:
+    app: account-service
+  ports:
+  - port: 8080
+    targetPort: 8080
