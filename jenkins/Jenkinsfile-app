@@ -29,8 +29,10 @@ pipeline {
             steps {
                 sh '''
                     which trivy || (
-                        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+                        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b $HOME/bin
+                        export PATH=$PATH:$HOME/bin
                     )
+                    export PATH=$PATH:$HOME/bin
                     trivy --version
                 '''
             }
@@ -92,6 +94,7 @@ pipeline {
         stage('Trivy Image Scan') {
             steps {
                 sh '''
+                    export PATH=$PATH:$HOME/bin
                     echo "=== Scanning frontend ==="
                     trivy image --exit-code 0 --severity HIGH,CRITICAL --no-progress $ECR_BASE/frontend:$IMAGE_TAG
 
