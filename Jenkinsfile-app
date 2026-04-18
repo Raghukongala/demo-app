@@ -80,18 +80,21 @@ pipeline {
 
         stage('Update Image Tags in Repo') {
             steps {
-                sh '''
-                    sed -i "s|$ECR_BASE/frontend:.*|$ECR_BASE/frontend:$IMAGE_TAG|g" k8s/frontend.yaml
-                    sed -i "s|$ECR_BASE/task-service:.*|$ECR_BASE/task-service:$IMAGE_TAG|g" k8s/task-service.yaml
-                    sed -i "s|$ECR_BASE/user-service:.*|$ECR_BASE/user-service:$IMAGE_TAG|g" k8s/user-service.yaml
-                    sed -i "s|$ECR_BASE/notification-service:.*|$ECR_BASE/notification-service:$IMAGE_TAG|g" k8s/notification-service.yaml
+                withCredentials([usernamePassword(credentialsId: 'github-credentials', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
+                    sh '''
+                        sed -i "s|$ECR_BASE/frontend:.*|$ECR_BASE/frontend:$IMAGE_TAG|g" k8s/frontend.yaml
+                        sed -i "s|$ECR_BASE/task-service:.*|$ECR_BASE/task-service:$IMAGE_TAG|g" k8s/task-service.yaml
+                        sed -i "s|$ECR_BASE/user-service:.*|$ECR_BASE/user-service:$IMAGE_TAG|g" k8s/user-service.yaml
+                        sed -i "s|$ECR_BASE/notification-service:.*|$ECR_BASE/notification-service:$IMAGE_TAG|g" k8s/notification-service.yaml
 
-                    git config user.email "jenkins@raghu.buzz"
-                    git config user.name "Jenkins"
-                    git add k8s/frontend.yaml k8s/task-service.yaml k8s/user-service.yaml k8s/notification-service.yaml
-                    git commit -m "Update image tags to build $IMAGE_TAG [skip ci]"
-                    git push origin main
-                '''
+                        git config user.email "jenkins@raghu.buzz"
+                        git config user.name "Jenkins"
+                        git remote set-url origin https://$GIT_USER:$GIT_TOKEN@github.com/Raghukongala/demo-app.git
+                        git add k8s/frontend.yaml k8s/task-service.yaml k8s/user-service.yaml k8s/notification-service.yaml
+                        git commit -m "Update image tags to build $IMAGE_TAG [skip ci]"
+                        git push origin main
+                    '''
+                }
             }
         }
 
