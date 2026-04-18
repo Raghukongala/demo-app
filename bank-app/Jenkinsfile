@@ -28,7 +28,7 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
-                    sh "${tool 'SonarScanner'}/bin/sonar-scanner -Dsonar.projectKey=bank-app -Dsonar.sources=bank-app -Dsonar.exclusions=**/node_modules/**,**/build/**,**/*.test.js,**/target/**,**/*.java,**/pom.xml"
+                    sh "${tool 'SonarScanner'}/bin/sonar-scanner -Dsonar.projectKey=bank-app -Dsonar.sources=bank-app -Dsonar.exclusions=**/*.java,**/pom.xml,**/node_modules/**,**/build/**,**/target/** -Dproject.settings=/dev/null"
                 }
             }
         }
