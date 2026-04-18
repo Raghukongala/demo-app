@@ -1,0 +1,136 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_REGION    = 'ap-south-1'
+        AWS_ACCOUNT   = '796796207873'
+        ECR_BASE      = "${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/task-management"
+        CLUSTER_NAME  = 'task-management-eks'
+        NAMESPACE     = 'task-management'
+        IMAGE_TAG     = "${BUILD_NUMBER}"
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('ECR Login') {
+            steps {
+                sh 'aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_BASE'
+            }
+        }
+
+        stage('Build & Push Images') {
+            parallel {
+                stage('frontend') {
+                    steps {
+                        dir('frontend') {
+                            sh '''
+                                docker build -t $ECR_BASE/frontend:$IMAGE_TAG .
+                                docker push $ECR_BASE/frontend:$IMAGE_TAG
+                                docker tag $ECR_BASE/frontend:$IMAGE_TAG $ECR_BASE/frontend:latest
+                                docker push $ECR_BASE/frontend:latest
+                            '''
+                        }
+                    }
+                }
+                stage('task-service') {
+                    steps {
+                        dir('task-service') {
+                            sh '''
+                                docker build -t $ECR_BASE/task-service:$IMAGE_TAG .
+                                docker push $ECR_BASE/task-service:$IMAGE_TAG
+                                docker tag $ECR_BASE/task-service:$IMAGE_TAG $ECR_BASE/task-service:latest
+                                docker push $ECR_BASE/task-service:latest
+                            '''
+                        }
+                    }
+                }
+                stage('user-service') {
+                    steps {
+                        dir('user-service') {
+                            sh '''
+                                docker build -t $ECR_BASE/user-service:$IMAGE_TAG .
+                                docker push $ECR_BASE/user-service:$IMAGE_TAG
+                                docker tag $ECR_BASE/user-service:$IMAGE_TAG $ECR_BASE/user-service:latest
+                                docker push $ECR_BASE/user-service:latest
+                            '''
+                        }
+                    }
+                }
+                stage('notification-service') {
+                    steps {
+                        dir('notification-service') {
+                            sh '''
+                                docker build -t $ECR_BASE/notification-service:$IMAGE_TAG .
+                                docker push $ECR_BASE/notification-service:$IMAGE_TAG
+                                docker tag $ECR_BASE/notification-service:$IMAGE_TAG $ECR_BASE/notification-service:latest
+                                docker push $ECR_BASE/notification-service:latest
+                            '''
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Update kubeconfig') {
+            steps {
+                sh 'aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME'
+            }
+        }
+
+        stage('Deploy to EKS') {
+            steps {
+                sh '''
+                    kubectl apply -f k8s/namespace.yaml
+                    kubectl apply -f k8s/configmap.yaml
+                    kubectl apply -f k8s/secrets.yaml
+                    kubectl apply -f k8s/postgres.yaml
+                    kubectl apply -f k8s/mongodb.yaml
+                    kubectl apply -f k8s/redis.yaml
+                    kubectl apply -f k8s/user-service.yaml
+                    kubectl apply -f k8s/task-service.yaml
+                    kubectl apply -f k8s/notification-service.yaml
+                    kubectl apply -f k8s/frontend.yaml
+                    kubectl apply -f k8s/ingress.yaml
+                    kubectl apply -f k8s/hpa.yaml
+                '''
+            }
+        }
+
+        stage('Update Image Tags') {
+            steps {
+                sh '''
+                    kubectl set image deployment/frontend frontend=$ECR_BASE/frontend:$IMAGE_TAG -n $NAMESPACE
+                    kubectl set image deployment/task-service task-service=$ECR_BASE/task-service:$IMAGE_TAG -n $NAMESPACE
+                    kubectl set image deployment/user-service user-service=$ECR_BASE/user-service:$IMAGE_TAG -n $NAMESPACE
+                    kubectl set image deployment/notification-service notification-service=$ECR_BASE/notification-service:$IMAGE_TAG -n $NAMESPACE
+                '''
+            }
+        }
+
+        stage('Verify Rollout') {
+            steps {
+                sh '''
+                    kubectl rollout status deployment/frontend -n $NAMESPACE --timeout=120s
+                    kubectl rollout status deployment/task-service -n $NAMESPACE --timeout=120s
+                    kubectl rollout status deployment/user-service -n $NAMESPACE --timeout=120s
+                    kubectl rollout status deployment/notification-service -n $NAMESPACE --timeout=120s
+                '''
+            }
+        }
+    }
+
+    post {
+        failure {
+            echo 'App deployment failed!'
+        }
+        success {
+            echo "App deployed successfully! Build: ${BUILD_NUMBER}"
+        }
+    }
+}
