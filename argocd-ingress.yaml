@@ -9,7 +9,7 @@ metadata:
     alb.ingress.kubernetes.io/load-balancer-name: argocd-alb
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
     alb.ingress.kubernetes.io/ssl-redirect: "443"
-    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-south-1:796796207873:certificate/85e2ffb5-c48d-4c59-82e8-86748d9949f6
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-south-1:957948932374:certificate/636c9394-8728-4af5-87db-ca83ac043a5d
     alb.ingress.kubernetes.io/backend-protocol: HTTP
     alb.ingress.kubernetes.io/healthcheck-path: /
     external-dns.alpha.kubernetes.io/hostname: argocd.raghu.buzz
