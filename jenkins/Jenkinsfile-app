@@ -3,18 +3,19 @@ pipeline {
 
     environment {
         AWS_REGION    = 'ap-south-1'
-        AWS_ACCOUNT   = '796796207873'
+        AWS_ACCOUNT   = '957948932374'
         ECR_BASE      = "${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/task-management"
         CLUSTER_NAME  = 'task-management-eks'
         NAMESPACE     = 'task-management'
         IMAGE_TAG     = "${BUILD_NUMBER}"
+        GIT_REPO      = 'https://github.com/Raghukongala/demo-app.git'
     }
 
     stages {
 
         stage('Checkout') {
             steps {
-                checkout scm
+                git branch: 'main', url: "${GIT_REPO}"
             }
         }
 
@@ -77,45 +78,29 @@ pipeline {
             }
         }
 
-        stage('Update kubeconfig') {
-            steps {
-                sh 'aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME'
-            }
-        }
-
-        stage('Deploy to EKS') {
+        stage('Update Image Tags in Repo') {
             steps {
                 sh '''
-                    kubectl apply -f k8s/namespace.yaml
-                    kubectl apply -f k8s/configmap.yaml
-                    kubectl apply -f k8s/secrets.yaml
-                    kubectl apply -f k8s/postgres.yaml
-                    kubectl apply -f k8s/mongodb.yaml
-                    kubectl apply -f k8s/redis.yaml
-                    kubectl apply -f k8s/user-service.yaml
-                    kubectl apply -f k8s/task-service.yaml
-                    kubectl apply -f k8s/notification-service.yaml
-                    kubectl apply -f k8s/frontend.yaml
-                    kubectl apply -f k8s/ingress.yaml
-                    kubectl apply -f k8s/hpa.yaml
+                    sed -i "s|$ECR_BASE/frontend:.*|$ECR_BASE/frontend:$IMAGE_TAG|g" k8s/frontend.yaml
+                    sed -i "s|$ECR_BASE/task-service:.*|$ECR_BASE/task-service:$IMAGE_TAG|g" k8s/task-service.yaml
+                    sed -i "s|$ECR_BASE/user-service:.*|$ECR_BASE/user-service:$IMAGE_TAG|g" k8s/user-service.yaml
+                    sed -i "s|$ECR_BASE/notification-service:.*|$ECR_BASE/notification-service:$IMAGE_TAG|g" k8s/notification-service.yaml
+
+                    git config user.email "jenkins@raghu.buzz"
+                    git config user.name "Jenkins"
+                    git add k8s/frontend.yaml k8s/task-service.yaml k8s/user-service.yaml k8s/notification-service.yaml
+                    git commit -m "Update image tags to build $IMAGE_TAG [skip ci]"
+                    git push origin main
                 '''
             }
         }
 
-        stage('Update Image Tags') {
+        stage('Verify ArgoCD Sync') {
             steps {
                 sh '''
-                    kubectl set image deployment/frontend frontend=$ECR_BASE/frontend:$IMAGE_TAG -n $NAMESPACE
-                    kubectl set image deployment/task-service task-service=$ECR_BASE/task-service:$IMAGE_TAG -n $NAMESPACE
-                    kubectl set image deployment/user-service user-service=$ECR_BASE/user-service:$IMAGE_TAG -n $NAMESPACE
-                    kubectl set image deployment/notification-service notification-service=$ECR_BASE/notification-service:$IMAGE_TAG -n $NAMESPACE
-                '''
-            }
-        }
-
-        stage('Verify Rollout') {
-            steps {
-                sh '''
+                    aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
+                    sleep 30
+                    kubectl get application task-management -n argocd
                     kubectl rollout status deployment/frontend -n $NAMESPACE --timeout=120s
                     kubectl rollout status deployment/task-service -n $NAMESPACE --timeout=120s
                     kubectl rollout status deployment/user-service -n $NAMESPACE --timeout=120s
@@ -130,7 +115,7 @@ pipeline {
             echo 'App deployment failed!'
         }
         success {
-            echo "App deployed successfully! Build: ${BUILD_NUMBER}"
+            echo "App deployed successfully via ArgoCD! Build: ${BUILD_NUMBER}"
         }
     }
 }
