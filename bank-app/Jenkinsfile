@@ -106,6 +106,7 @@ pipeline {
                     kubectl apply -f bank-app/k8s/notification-service.yaml
                     kubectl apply -f bank-app/k8s/frontend.yaml
                     kubectl apply -f bank-app/k8s/ingress.yaml
+                    kubectl apply -f bank-app/argocd-application.yaml
                 '''
             }
         }
