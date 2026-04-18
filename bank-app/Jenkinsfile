@@ -125,7 +125,7 @@ pipeline {
             steps {
                 sh '''
                     kubectl rollout status deployment/frontend -n $NAMESPACE --timeout=180s
-                    kubectl rollout status deployment/account-service -n $NAMESPACE --timeout=180s
+                    kubectl rollout status deployment/account-service -n $NAMESPACE --timeout=300s
                     kubectl rollout status deployment/transaction-service -n $NAMESPACE --timeout=180s
                 '''
             }
