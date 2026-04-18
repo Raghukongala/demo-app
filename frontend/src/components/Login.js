@@ -92,11 +92,11 @@ function Login() {
                 boxShadow: '0 0 40px rgba(99,102,241,0.4)',
                 fontSize: '2.5rem', fontWeight: 700, color: 'white',
               }}>
-                K
+                B
               </Box>
 
               <Typography variant="h3" component="h1" gutterBottom sx={{ fontWeight: 800, letterSpacing: '-0.5px' }}>
-                Kiran
+                BAL
               </Typography>
               <Typography variant="h6" sx={{ opacity: 0.7, mb: 1, color: '#10b981' }}>
                 DevOps Engineer
@@ -277,7 +277,7 @@ function Login() {
 
             {/* Footer */}
             <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', mt: 2, color: 'rgba(255,255,255,0.3)' }}>
-              Built by Kiran • AWS EKS • Terraform • Jenkins • ArgoCD
+              Built by BAL • AWS EKS • Terraform • Jenkins • ArgoCD
             </Typography>
           </Grid>
         </Grid>
