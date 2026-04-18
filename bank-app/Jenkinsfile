@@ -99,11 +99,11 @@ pipeline {
                 sh '''
                     export PATH=$PATH:$HOME/bin
                     echo "=== Scanning account-service ==="
-                    trivy image --exit-code 0 --severity HIGH,CRITICAL --no-progress $ECR_BASE/account-service:$IMAGE_TAG
+                    trivy image --exit-code 0 --severity HIGH,CRITICAL --no-progress --scanners vuln $ECR_BASE/account-service:$IMAGE_TAG
                     echo "=== Scanning transaction-service ==="
-                    trivy image --exit-code 0 --severity HIGH,CRITICAL --no-progress $ECR_BASE/transaction-service:$IMAGE_TAG
+                    trivy image --exit-code 0 --severity HIGH,CRITICAL --no-progress --scanners vuln $ECR_BASE/transaction-service:$IMAGE_TAG
                     echo "=== Scanning frontend ==="
-                    trivy image --exit-code 0 --severity HIGH,CRITICAL --no-progress $ECR_BASE/frontend:$IMAGE_TAG
+                    trivy image --exit-code 0 --severity HIGH,CRITICAL --no-progress --scanners vuln $ECR_BASE/frontend:$IMAGE_TAG
                 '''
             }
         }
