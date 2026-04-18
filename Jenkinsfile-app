@@ -25,6 +25,17 @@ pipeline {
             }
         }
 
+        stage('Install Trivy') {
+            steps {
+                sh '''
+                    which trivy || (
+                        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+                    )
+                    trivy --version
+                '''
+            }
+        }
+
         stage('Build & Push Images') {
             parallel {
                 stage('frontend') {
@@ -75,6 +86,24 @@ pipeline {
                         }
                     }
                 }
+            }
+        }
+
+        stage('Trivy Image Scan') {
+            steps {
+                sh '''
+                    echo "=== Scanning frontend ==="
+                    trivy image --exit-code 0 --severity HIGH,CRITICAL --no-progress $ECR_BASE/frontend:$IMAGE_TAG
+
+                    echo "=== Scanning task-service ==="
+                    trivy image --exit-code 0 --severity HIGH,CRITICAL --no-progress $ECR_BASE/task-service:$IMAGE_TAG
+
+                    echo "=== Scanning user-service ==="
+                    trivy image --exit-code 0 --severity HIGH,CRITICAL --no-progress $ECR_BASE/user-service:$IMAGE_TAG
+
+                    echo "=== Scanning notification-service ==="
+                    trivy image --exit-code 0 --severity HIGH,CRITICAL --no-progress $ECR_BASE/notification-service:$IMAGE_TAG
+                '''
             }
         }
 
