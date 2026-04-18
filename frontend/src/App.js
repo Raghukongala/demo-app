@@ -12,9 +12,9 @@ const theme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#2563eb', // Modern blue
-      light: '#3b82f6',
-      dark: '#1d4ed8',
+      main: '#16a34a', // Modern green - ArgoCD test
+      light: '#22c55e',
+      dark: '#15803d',
     },
     secondary: {
       main: '#7c3aed', // Purple accent
